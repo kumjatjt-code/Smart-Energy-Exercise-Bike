@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Power Dashboard</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f6f9;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    h1 { color: #333; }
+    #status {
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+    .grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .card {
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      width: 160px;
+    }
+    .card h3 {
+      margin: 0;
+      color: #666;
+      font-size: 14px;
+      text-transform: uppercase;
+    }
+    .card .value {
+      font-size: 26px;
+      font-weight: bold;
+      color: #007bff;
+      margin-top: 10px;
+    }
+    button {
+      margin-top: 30px;
+      padding: 12px 24px;
+      font-size: 16px;
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background-color: #bd2130;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Smart Power Monitoring</h1>
+  <div id="status" style="color: orange;">กำลังเชื่อมต่อ Server...</div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Voltage</h3>
+      <div class="value"><span id="v">0.0</span> V</div>
+    </div>
+    <div class="card">
+      <h3>Current</h3>
+      <div class="value"><span id="i">0.00</span> A</div>
+    </div>
+    <div class="card">
+      <h3>Power</h3>
+      <div class="value"><span id="p">0.0</span> W</div>
+    </div>
+    <div class="card">
+      <h3>Energy</h3>
+      <div class="value"><span id="e">0.00</span> Wh</div>
+    </div>
+  </div>
+
+  <button onclick="resetEnergy()">Reset Energy (Wh)</button>
+
+  <script>
+    // ตรวจสอบ Protocol (http -> ws, https -> wss)
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/esp`;
+    const ws = new WebSocket(wsUrl);
+
+    const statusEl = document.getElementById('status');
+
+    ws.onopen = () => {
+      statusEl.textContent = 'เชื่อมต่อระบบสำเร็จ';
+      statusEl.style.color = 'green';
+    };
+
+    ws.onclose = () => {
+      statusEl.textContent = 'ขาดการเชื่อมต่อจาก Server';
+      statusEl.style.color = 'red';
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'ENERGY_DATA') {
+          if (data.voltage !== undefined) document.getElementById('v').textContent = data.voltage;
+          if (data.current !== undefined) document.getElementById('i').textContent = data.current;
+          if (data.power !== undefined) document.getElementById('p').textContent = data.power;
+          if (data.energy !== undefined) document.getElementById('e').textContent = data.energy;
+        }
+      } catch (err) {
+        console.error('Error parsing JSON:', err);
+      }
+    };
+
+    function resetEnergy() {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'RESET_ENERGY' }));
+        alert('ส่งคำสั่ง Reset Energy ไปยัง ESP32 เรียบร้อยแล้ว');
+      } else {
+        alert('ไม่สามารถส่งคำสั่งได้ เนื่องจาก WebSocket ไม่ได้เชื่อมต่ออยู่');
+      }
+    }
+  </script>
+</body>
+</html>
