@@ -1,16 +1,13 @@
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ให้บริการไฟล์ Static สำหรับหน้า Dashboard (ถ้ามีโฟลเดอร์ public)
-app.use(express.static('public'));
-
-app.get('/', (req, res) => {
-  res.send('Smart Power WebSocket Server is Running!');
-});
+// ให้บริการไฟล์ Static จากโฟลเดอร์ public
+app.use(express.static(path.join(__dirname, 'public')));
 
 const server = http.createServer(app);
 
@@ -19,7 +16,7 @@ const wss = new WebSocket.Server({ server, path: '/esp' });
 
 wss.on('connection', (ws, req) => {
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-  console.log(`[Server] คลื่นลูกใหม่เชื่อมต่อเข้ามาจาก IP: ${ip}`);
+  console.log(`[Server] Client connected from IP: ${ip}`);
 
   ws.on('message', (message) => {
     const dataStr = message.toString();
@@ -34,7 +31,7 @@ wss.on('connection', (ws, req) => {
   });
 
   ws.on('close', () => {
-    console.log('[Server] การเชื่อมต่อถูกตัด');
+    console.log('[Server] Client disconnected');
   });
 
   ws.on('error', (err) => {
@@ -42,7 +39,7 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`[Server] กำลังทำงานที่พอร์ต ${PORT}`);
+// กำหนด '0.0.0.0' เพื่อให้ Render สแกนเจอ Port ทันทีที่สตาร์ท
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`[Server] Running on port ${PORT}`);
 });
-2. โค้ดฝั่ง ES
